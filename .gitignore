@@ -1,0 +1,5 @@
+/build/
+/dist/
+/.venv/
+/Divi-Wallet-Importer.spec
+.idea

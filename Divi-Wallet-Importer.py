@@ -33,6 +33,12 @@ def log_error(error_message):
     # Log the error
     logging.error(error_message)
 
+log_file = os.path.join(os.path.expanduser('~'), 'divi_app_debug.log')
+sys.stdout = open(log_file, 'w')
+sys.stderr = open(log_file, 'w')
+
+print("Logging started...")
+
 # Simulate an error for testing
 # def simulate_error():
 #     try:
@@ -55,6 +61,15 @@ formatted_time = backuptime.strftime('%Y-%m-%d-%H-%M-%S')
 # Use the formatted time in the backup file name
 name_of_backup = f"wallet_backup_{formatted_time}.dat"
 
+def resource_path(relative_path):
+    """ Get the absolute path to a resource, works for both dev and PyInstaller .exe """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
 
 # Function to load the .ttf file and return the font family name
 def load_custom_font(ttf_path):
@@ -75,7 +90,7 @@ roboto_regular = load_custom_font(roboto_regular_path)
 roboto_bold = load_custom_font(roboto_bold_path)
 
 # Load GIF for animation
-gif_path = "images/gears_larger.gif"
+gif_path = resource_path("images/gears_larger.gif")
 
 
 # Validate the mnemonic using checksum
@@ -201,7 +216,7 @@ def set_answer(answer):
 def on_submit():
     try:
         print("Submit button clicked")
-        sys.stdout.flush()  # Flush immediately for debugging purposes
+        sys.stdout.flush()  # Ensure the message is written to the log file immediately
 
         mnemonic_words = [entry.get().strip().lower() for entry in entries]
         print(f"Collected mnemonic words: {mnemonic_words}")
@@ -209,23 +224,32 @@ def on_submit():
 
         # Check for empty fields
         if not all(mnemonic_words):
+            print("Please fill all 12 fields before submitting.")
+            sys.stdout.flush()
             update_status_message("Please fill all 12 fields before submitting.", "warning")  # Show warning message
             return
 
         # Validate the mnemonic phrase
         valid, message = validate_mnemonic(mnemonic_words)
+        print(f"Validation result: {valid}, {message}")
+        sys.stdout.flush()
 
         if valid:
-            update_status_message("Mnemonic seed phrase is valid! Starting recovery...", "success")  # Success message
+            print("Mnemonic seed phrase is valid! Starting recovery...")
+            sys.stdout.flush()
+            update_status_message("Mnemonic seed phrase is valid! Starting recovery...", "success")
             clear_previous_elements()
             gif_label.grid(row=3, column=1, columnspan=6, pady=20, sticky="ew")
             display_loading_animation()
             root.after(500, run_divid, mnemonic_words)
         else:
-            update_status_message("Invalid seed words, please try again. Double-check your seed phrase.", "error")  # Error message
+            print("Invalid seed words.")
+            sys.stdout.flush()
+            update_status_message("Invalid seed words, please try again.", "error")  # Error message
             root.after(3000, reset_form_and_status)
     except Exception as e:
-        logging.exception(f"Exception in on_submit: {str(e)}")
+        print(f"Exception in on_submit: {str(e)}")
+        sys.stdout.flush()
         update_status_message(f"An error occurred: {str(e)}", "error")
 
 
@@ -323,62 +347,102 @@ def display_mnemonic_form():
 
 
 
+import subprocess
+import os
+import logging
+
 def run_divid(mnemonic_words):
     try:
-        divi_daemon_path = os.path.join(os.getenv('APPDATA'), "Divi Desktop", "divid", "unpacked", "divi_win_64",
-                                        "divid.exe")
-        mnemonic_str = " ".join(mnemonic_words)
-        command = [divi_daemon_path, f'-mnemonic={mnemonic_str}', "-force_rescan=1"]
+        appdata_path = os.getenv('APPDATA')
+        if appdata_path:
+            # Change the working directory to where divid.exe and divi-cli.exe are located
+            divi_dir = os.path.join(appdata_path, "Divi Desktop", "divid", "unpacked", "divi_win_64")
+            os.chdir(divi_dir)
 
-        logging.debug(f"Executing command: {command}")
-        subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        update_status_message("Daemon started in the background. Monitoring recovery process...")
-        recovery_thread = threading.Thread(target=monitor_recovery_status)
-        recovery_thread.daemon = True
-        recovery_thread.start()
-    except subprocess.CalledProcessError as e:
-        logging.exception(f"Failed to recover the wallet: {str(e)}")
-        update_status_message(f"Failed to recover the wallet. Error: {str(e)}")
+            divi_daemon_path = os.path.join(divi_dir, "divid.exe")
+            mnemonic_str = " ".join(mnemonic_words)
+
+            # Log the paths and the command for debugging
+            logging.debug(f"divi_daemon_path: {divi_daemon_path}")
+            logging.debug(f"Command: divid.exe -mnemonic={mnemonic_str} -force_rescan=1")
+
+            if not os.path.exists(divi_daemon_path):
+                update_status_message(f"divid.exe not found at path: {divi_daemon_path}", "error")
+                return
+
+            command = [divi_daemon_path, f'-mnemonic={mnemonic_str}', "-force_rescan=1"]
+            logging.debug(f"Executing command: {command}")
+
+            # Setup to suppress command windows more aggressively
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
+            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                       creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS,
+                                       startupinfo=startupinfo)
+            if process:
+                update_status_message("Daemon started in the background. Monitoring recovery process...")
+                recovery_thread = threading.Thread(target=monitor_recovery_status)
+                recovery_thread.daemon = True
+                recovery_thread.start()
+            else:
+                update_status_message("Failed to start daemon.", "error")
+        else:
+            update_status_message("APPDATA environment variable not found.", "error")
+    except Exception as e:
+        logging.exception(f"Error in run_divid: {str(e)}")
+        update_status_message(f"Error starting daemon: {str(e)}", "error")
+
 
 
 def monitor_recovery_status():
     try:
-        divi_cli_path = os.path.join(os.getenv('APPDATA'), "Divi Desktop", "divid", "unpacked", "divi_win_64",
-                                     "divi-cli.exe")
+        appdata_path = os.getenv('APPDATA')
+        if appdata_path:
+            divi_cli_path = os.path.join(appdata_path, "Divi Desktop", "divid", "unpacked", "divi_win_64", "divi-cli.exe")
 
-        while True:
-            result = subprocess.run([divi_cli_path, "getinfo"], capture_output=True, text=True, check=False)
-            output = result.stderr.strip() if result.stderr else result.stdout.strip()
+            while True:
+                # Ensure the subprocess runs in the background without showing a cmd window
+                result = subprocess.run([divi_cli_path, "getinfo"], capture_output=True, text=True, check=False,
+                                        creationflags=subprocess.CREATE_NO_WINDOW)
 
-            if output.startswith("error:"):
-                error_msg = json.loads(output.replace("error: ", ""))
-                message = error_msg.get("message", "")
+                output = result.stderr.strip() if result.stderr else result.stdout.strip()
 
-                if "Loading block index" in message:
-                    update_status_message("Loading blockchain data... Please wait.")
-                elif "Loading wallet" in message:
-                    percent = message.split("(")[1].split("%")[0].strip() + "%"
-                    update_status_message(f"Wallet recovery in progress... {percent} complete.")
-                elif "Scanning chain for wallet updates" in message:
-                    update_status_message("Divi Core is scanning for transaction history... Please wait.")
-                    time.sleep(5)
+                if output.startswith("error:"):
+                    error_msg = json.loads(output.replace("error: ", ""))
+                    message = error_msg.get("message", "")
+
+                    if "Loading block index" in message:
+                        update_status_message("Loading blockchain data... Please wait.")
+                    elif "Loading wallet" in message:
+                        percent = message.split("(")[1].split("%")[0].strip() + "%"
+                        update_status_message(f"Wallet recovery in progress... {percent} complete.")
+                    elif "Scanning chain for wallet updates" in message:
+                        update_status_message("Divi Core is scanning for transaction history... Please wait.")
+                        time.sleep(5)
+                        launch_divi_desktop()
+                        return
+                else:
+                    update_status_message("Recovery complete. Opening Divi Desktop...")
+                    time.sleep(2)
                     launch_divi_desktop()
                     return
-            else:
-                update_status_message("Recovery complete. Opening Divi Desktop...")
-                time.sleep(2)
-                launch_divi_desktop()
-                return
 
-            time.sleep(5)
+                time.sleep(5)
+        else:
+            update_status_message("APPDATA environment variable not found.", "error")
     except Exception as e:
         logging.exception(f"Error monitoring recovery status: {str(e)}")
         update_status_message(f"Error in recovery process: {str(e)}")
 
 
+
 def launch_divi_desktop():
     try:
-        update_status_message("Divi Desktop is now opening. Please be patient while it syncs and rescans.")
+        update_status_message("In a moment Divi Wallet Importer will close open Divi Desktop Application.")
+        time.sleep(2)
+        update_status_message("Divi Desktop Application now opening. Please be patient while it syncs and rescans.")
+        time.sleep(1)
         divi_desktop_path = "C:/Program Files/Divi Desktop/Divi Desktop.exe"
         os.startfile(divi_desktop_path)
         root.quit()
@@ -398,7 +462,7 @@ def check_wallet_and_handle_flow():
     if os.path.exists(wallet_path):
         # Ask to backup and rename it
         backup_result = ask_yes_no(
-            f"A wallet.dat file was found. It will be backed up as {name_of_backup}.\nDo you want to continue?"
+            f"A wallet.dat file was found.\n\n It will be backed up as {name_of_backup}.\nDo you want to continue?"
         )
 
         # Convert response to boolean
@@ -538,12 +602,12 @@ for i in range(8):
 var_answer = ctk.StringVar()
 
 try:
-    root.iconbitmap("images/divi-logomark-red.ico")
+    root.iconbitmap(resource_path("images/divi-logomark-red.ico"))
 except Exception as e:
     print(f"Error loading icon: {e}")
 
 try:
-    logo_image_path = os.path.abspath("images/divi-logomark-red.png")
+    logo_image_path = resource_path("images/divi-logomark-red.png")
     logo_image = ctk.CTkImage(light_image=Image.open(logo_image_path), size=(50, 50))
     logo_label = ctk.CTkLabel(root, image=logo_image, text="")
     logo_label.place(x=10, y=10)
