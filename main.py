@@ -325,8 +325,8 @@ def display_mnemonic_form():
 
 def run_divid(mnemonic_words):
     try:
-        divi_daemon_path = os.path.join(os.getenv('APPDATA'), "Divi Desktop", "divid", "unpacked", "divi_win_64",
-                                        "divid.exe")
+        # divi_daemon_path = os.path.join(os.getenv('APPDATA'), "Divi Desktop", "divid", "unpacked", "divi_win_64",
+        #                                 "divid.exe")
         mnemonic_str = " ".join(mnemonic_words)
         command = [divi_daemon_path, f'-mnemonic={mnemonic_str}', "-force_rescan=1"]
 
