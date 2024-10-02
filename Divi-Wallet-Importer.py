@@ -92,6 +92,7 @@ roboto_bold = load_custom_font(roboto_bold_path)
 
 # Load GIF for animation
 gif_path = resource_path("images/gears_larger.gif")
+print(resource_path("images/gears_larger.gif"))
 
 
 # Validate the mnemonic using checksum
@@ -595,6 +596,7 @@ except Exception as e:
 
 try:
     logo_image_path = resource_path("images/divi-logomark-red.png")
+    print(resource_path("images/divi-logomark-red.png"))
     logo_image = ctk.CTkImage(light_image=Image.open(logo_image_path), size=(50, 50))
     logo_label = ctk.CTkLabel(root, image=logo_image, text="")
     logo_label.place(x=10, y=10)
