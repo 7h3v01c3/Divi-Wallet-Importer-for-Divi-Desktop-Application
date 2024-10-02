@@ -15,8 +15,8 @@ import datetime
 
 # Function to create log directory and log the error only when an error occurs
 def log_error(error_message):
-    # Define the log directory path (e.g., on the Desktop in a folder called DWtoDD_logs)
-    desktop_path = os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop')
+    # Define the log directory path on macOS (e.g., on the Desktop in a folder called DWtoDD_logs)
+    desktop_path = os.path.expanduser('~/Desktop')
     log_directory = os.path.join(desktop_path, "DWtoDD_logs")
 
     # Only create the log directory and log file when an error occurs
@@ -33,6 +33,7 @@ def log_error(error_message):
     # Log the error
     logging.error(error_message)
 
+# Set up general logging for stdout and stderr to a log file on macOS
 log_file = os.path.join(os.path.expanduser('~'), 'divi_app_debug.log')
 sys.stdout = open(log_file, 'w')
 sys.stderr = open(log_file, 'w')
@@ -345,114 +346,100 @@ def display_mnemonic_form():
     except Exception as e:
         logging.exception(f"Error displaying mnemonic form: {str(e)}")
 
-
-
-import subprocess
-import os
-import logging
-
 def run_divid(mnemonic_words):
     try:
-        appdata_path = os.getenv('APPDATA')
-        if appdata_path:
-            # Change the working directory to where divid.exe and divi-cli.exe are located
-            divi_dir = os.path.join(appdata_path, "Divi Desktop", "divid", "unpacked", "divi_win_64")
-            os.chdir(divi_dir)
+        # macOS path for Divi Desktop daemon and CLI
+        divi_dir = os.path.expanduser("~/Library/Application Support/Divi Desktop/divid/unpacked/divi_osx")
+        os.chdir(divi_dir)
 
-            divi_daemon_path = os.path.join(divi_dir, "divid.exe")
-            mnemonic_str = " ".join(mnemonic_words)
+        divi_daemon_path = os.path.join(divi_dir, "divid")
+        mnemonic_str = " ".join(mnemonic_words)
 
-            # Log the paths and the command for debugging
-            logging.debug(f"divi_daemon_path: {divi_daemon_path}")
-            logging.debug(f"Command: divid.exe -mnemonic={mnemonic_str} -force_rescan=1")
+        # Log the paths and the command for debugging
+        logging.debug(f"divi_daemon_path: {divi_daemon_path}")
+        logging.debug(f"Command: divid -mnemonic={mnemonic_str} -force_rescan=1")
 
-            if not os.path.exists(divi_daemon_path):
-                update_status_message(f"divid.exe not found at path: {divi_daemon_path}", "error")
-                return
+        if not os.path.exists(divi_daemon_path):
+            update_status_message(f"divid not found at path: {divi_daemon_path}", "error")
+            return
 
-            command = [divi_daemon_path, f'-mnemonic={mnemonic_str}', "-force_rescan=1"]
-            logging.debug(f"Executing command: {command}")
+        command = [divi_daemon_path, f'-mnemonic={mnemonic_str}', "-force_rescan=1"]
+        logging.debug(f"Executing command: {command}")
 
-            # Setup to suppress command windows more aggressively
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-
-            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                       creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS,
-                                       startupinfo=startupinfo)
-            if process:
-                update_status_message("Daemon started in the background. Monitoring recovery process...")
-                recovery_thread = threading.Thread(target=monitor_recovery_status)
-                recovery_thread.daemon = True
-                recovery_thread.start()
-            else:
-                update_status_message("Failed to start daemon.", "error")
+         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if process:
+            update_status_message("Daemon started in the background. Monitoring recovery process...")
+            recovery_thread = threading.Thread(target=monitor_recovery_status)
+            recovery_thread.daemon = True
+            recovery_thread.start()
         else:
-            update_status_message("APPDATA environment variable not found.", "error")
+            update_status_message("Failed to start daemon.", "error")
     except Exception as e:
         logging.exception(f"Error in run_divid: {str(e)}")
         update_status_message(f"Error starting daemon: {str(e)}", "error")
 
-
-
 def monitor_recovery_status():
     try:
-        appdata_path = os.getenv('APPDATA')
-        if appdata_path:
-            divi_cli_path = os.path.join(appdata_path, "Divi Desktop", "divid", "unpacked", "divi_win_64", "divi-cli.exe")
+        # macOS path for Divi CLI
+        divi_cli_path = os.path.expanduser("~/Library/Application Support/Divi Desktop/divid/unpacked/divi_osx/divi-cli")
 
-            while True:
-                # Ensure the subprocess runs in the background without showing a cmd window
-                result = subprocess.run([divi_cli_path, "getinfo"], capture_output=True, text=True, check=False,
-                                        creationflags=subprocess.CREATE_NO_WINDOW)
+        while True:
+            result = subprocess.run([divi_cli_path, "getinfo"], capture_output=True, text=True)
 
-                output = result.stderr.strip() if result.stderr else result.stdout.strip()
+            output = result.stderr.strip() if result.stderr else result.stdout.strip()
 
-                if output.startswith("error:"):
-                    error_msg = json.loads(output.replace("error: ", ""))
-                    message = error_msg.get("message", "")
+            if output.startswith("error:"):
+                error_msg = json.loads(output.replace("error: ", ""))
+                message = error_msg.get("message", "")
 
-                    if "Loading block index" in message:
-                        update_status_message("Loading blockchain data... Please wait.")
-                    elif "Loading wallet" in message:
-                        percent = message.split("(")[1].split("%")[0].strip() + "%"
-                        update_status_message(f"Wallet recovery in progress... {percent} complete.")
-                    elif "Scanning chain for wallet updates" in message:
-                        update_status_message("Divi Core is scanning for transaction history... Please wait.")
-                        time.sleep(5)
-                        launch_divi_desktop()
-                        return
-                else:
-                    update_status_message("Recovery complete. Opening Divi Desktop...")
-                    time.sleep(2)
+                if "Loading block index" in message:
+                    update_status_message("Loading blockchain data... Please wait.")
+                elif "Loading wallet" in message:
+                    percent = message.split("(")[1].split("%")[0].strip() + "%"
+                    update_status_message(f"Wallet recovery in progress... {percent} complete.")
+                elif "Scanning chain for wallet updates" in message:
+                    update_status_message("Divi Core is scanning for transaction history... Please wait.")
+                    time.sleep(5)
                     launch_divi_desktop()
                     return
+            else:
+                update_status_message("Recovery complete. Opening Divi Desktop...")
+                time.sleep(2)
+                launch_divi_desktop()
+                return
 
-                time.sleep(5)
-        else:
-            update_status_message("APPDATA environment variable not found.", "error")
+            time.sleep(5)
     except Exception as e:
         logging.exception(f"Error monitoring recovery status: {str(e)}")
         update_status_message(f"Error in recovery process: {str(e)}")
 
 
 
+
 def launch_divi_desktop():
     try:
-        update_status_message("In a moment Divi Wallet Importer will close open Divi Desktop Application.")
+        update_status_message("In a moment Divi Wallet Importer will close and open the Divi Desktop Application.")
         time.sleep(2)
         update_status_message("Divi Desktop Application now opening. Please be patient while it syncs and rescans.")
         time.sleep(1)
-        divi_desktop_path = "C:/Program Files/Divi Desktop/Divi Desktop.exe"
-        os.startfile(divi_desktop_path)
+
+        # Path to the Divi Desktop.app on macOS
+        divi_desktop_path = "/Applications/Divi Desktop.app"
+
+        # Open Divi Desktop on macOS
+        subprocess.run(["open", divi_desktop_path])
+
+        # Close Divi Wallet Importer after launching Divi Desktop
         root.quit()
     except Exception as e:
         logging.exception(f"Could not launch Divi Desktop: {str(e)}")
         update_status_message(f"Could not launch Divi Desktop: {str(e)}")
 
+
 # Function to check if wallet.dat exists and handle the flow
 def check_wallet_and_handle_flow():
-    divi_path = os.path.join(os.getenv('APPDATA'), 'DIVI')
+    # Update the path for macOS
+    divi_path = os.path.expanduser('~/Library/Application Support/DIVI')
     wallet_path = os.path.join(divi_path, 'wallet.dat')
 
     root.grid_rowconfigure(1, minsize=60)  # Adding space above for the status label
@@ -476,7 +463,6 @@ def check_wallet_and_handle_flow():
                 update_status_message("Backup failed. Cannot proceed.", "error")
         else:  # If user cancels backup, use display_message_and_wait
             display_message_and_wait("Backup canceled. Exiting the app...", action="quit")
-
     else:
         # 2. If `wallet.dat` does NOT exist
         handle_no_wallet()
@@ -547,7 +533,7 @@ def handle_no_wallet():
 
 # Function to rename wallet.dat and remove divitxs.db
 def rename_wallet():
-    divi_path = os.path.join(os.getenv('APPDATA'), 'DIVI')
+    divi_path = os.path.expanduser('~/Library/Application Support/DIVI')
     wallet_path = os.path.join(divi_path, 'wallet.dat')
     backup_path = os.path.join(divi_path, name_of_backup)
 
@@ -570,10 +556,10 @@ def rename_wallet():
         update_status_message("wallet.dat not found")
         return False
 
-
 # Function to remove divitxs.db file (handles non-existence gracefully)
 def remove_divitxs_db():
-    divi_folder_path = os.path.join(os.getenv('APPDATA'), "Divi Desktop")
+    # Update the path for macOS
+    divi_folder_path = os.path.expanduser('~/Library/Application Support/Divi Desktop')
     divitxs_db_path = os.path.join(divi_folder_path, "divitxs.db")
 
     if os.path.exists(divitxs_db_path):
@@ -587,6 +573,7 @@ def remove_divitxs_db():
     else:
         logging.info(f"{divitxs_db_path} does not exist.")
         update_status_message(f"{divitxs_db_path} does not exist.")
+
 
 # Set up the CustomTkinter window
 ctk.set_appearance_mode("System")
