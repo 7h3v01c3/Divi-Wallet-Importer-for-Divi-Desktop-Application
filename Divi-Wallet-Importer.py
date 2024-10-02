@@ -10,6 +10,7 @@ from PIL import Image, ImageTk, ImageSequence, ImageFont
 from mnemonic import Mnemonic
 import json
 import datetime
+import psutil
 
 
 
@@ -379,18 +380,41 @@ def run_divid(mnemonic_words):
         logging.exception(f"Error in run_divid: {str(e)}")
         update_status_message(f"Error starting daemon: {str(e)}", "error")
 
+def is_process_running(process_name):
+    """Check if a process with a given name is running."""
+    for proc in psutil.process_iter(['pid', 'name']):
+        if process_name in proc.info['name']:
+            return True
+    return False
+
+
 def monitor_recovery_status():
     try:
         # macOS path for Divi CLI
-        divi_cli_path = os.path.expanduser("~/Library/Application Support/Divi Desktop/divid/unpacked/divi_osx/divi-cli")
+        divi_cli_path = os.path.expanduser(
+            "~/Library/Application Support/Divi Desktop/divid/unpacked/divi_osx/divi-cli")
 
+        # Check if the daemon process is running first
         while True:
+            if not is_process_running("divid"):
+                update_status_message("Waiting for Divi daemon to start...", "info")
+                time.sleep(5)  # Retry every 5 seconds
+                continue
+
             result = subprocess.run([divi_cli_path, "getinfo"], capture_output=True, text=True)
 
             output = result.stderr.strip() if result.stderr else result.stdout.strip()
 
             if output.startswith("error:"):
-                error_msg = json.loads(output.replace("error: ", ""))
+                # Check if output is not empty and is valid JSON
+                try:
+                    error_msg = json.loads(output.replace("error: ", ""))
+                except json.JSONDecodeError:
+                    logging.error(f"Failed to parse JSON: {output}")
+                    update_status_message("Working on wallet recovery, this may take a few more moments.", "error")
+                    time.sleep(5)  # Wait and retry
+                    continue
+
                 message = error_msg.get("message", "")
 
                 if "Loading block index" in message:
@@ -404,12 +428,13 @@ def monitor_recovery_status():
                     launch_divi_desktop()
                     return
             else:
+                # If there's no error, the recovery is likely complete
                 update_status_message("Recovery complete. Opening Divi Desktop...")
                 time.sleep(2)
                 launch_divi_desktop()
                 return
 
-            time.sleep(5)
+            time.sleep(5)  # Wait before polling again
     except Exception as e:
         logging.exception(f"Error monitoring recovery status: {str(e)}")
         update_status_message(f"Error in recovery process: {str(e)}")
