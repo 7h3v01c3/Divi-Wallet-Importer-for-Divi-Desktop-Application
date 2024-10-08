@@ -404,8 +404,7 @@ def is_process_running(process_name):
 def monitor_recovery_status():
     try:
         # Windows path for Divi CLI
-        divi_cli_path = os.path.join(os.getenv('APPDATA'), "Divi Desktop", "divid", "unpacked", "divi_win_64",
-                                     "divi-cli.exe")
+        divi_cli_path = os.path.join(os.getenv('APPDATA'), "Divi Desktop", "divid", "unpacked", "divi_win_64", "divi-cli.exe")
 
         # Check if the daemon process is running first
         while True:
@@ -414,7 +413,11 @@ def monitor_recovery_status():
                 time.sleep(5)  # Retry every 5 seconds
                 continue
 
-            result = subprocess.run([divi_cli_path, "getinfo"], capture_output=True, text=True)
+            # Suppress the console window when running subprocess
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
+            result = subprocess.run([divi_cli_path, "getinfo"], capture_output=True, text=True, startupinfo=startupinfo, creationflags=subprocess.CREATE_NO_WINDOW)
 
             output = result.stderr.strip() if result.stderr else result.stdout.strip()
 
@@ -451,7 +454,6 @@ def monitor_recovery_status():
     except Exception as e:
         logging.exception(f"Error monitoring recovery status: {str(e)}")
         update_status_message(f"Error in recovery process: {str(e)}", "error")
-
 
 
 def launch_divi_desktop():
