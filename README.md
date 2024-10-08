@@ -16,10 +16,11 @@ The **Divi Wallet Importer** is a GUI application designed to allow users to sec
 1. **Download the Application**: Visit the **Releases** section on this GitHub repository to download the latest compiled `.exe` for Windows or `.app` for macOS (coming soon).
 2. **Running on Windows**:
    - After downloading, double-click the `.exe` file to run the application.
+   - Or install the `msi` and click the shortcut on desktop to run the application.
    - Windows Defender or Firewall may display a prompt; please allow the application to run.
 3. **macOS and Future Versions**:
    - The macOS `.app` version is currently under development and will be released shortly.
-   - The `.msix` package for Windows and cross-platform versions may also be available in future updates.
+   - The `.msix` package for Windows in Microsoft store and cross-platform versions may also be available in future updates.
 
 ### Usage
 
