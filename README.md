@@ -54,8 +54,6 @@ pip install psutil pillow customtkinter mnemonic
 - **Error Logs**: If you encounter any issues, refer to the `DWtoDD_logs` directory on your Desktop. These logs can provide insights for troubleshooting.
 - **Known Issues**:
   - Console Window on Windows: Some users may experience a brief console window popup when running certain recovery operations. This is addressed by suppressing the console as much as possible within the code.
-  - APPDATA Environment Variable: The application relies on the APPDATA environment variable on Windows. A missing APPDATA variable may indicate OS-level issues.
-  - **macOS and Linux**: If you encounter issues specific to these operating systems, feel free to open an issue.
 
 ### Contributing
 
