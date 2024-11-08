@@ -22,8 +22,24 @@ The **Divi Wallet Importer** is a GUI application designed to allow users to sec
    - The macOS `.app` version is currently under development and will be released shortly.
    - The `.msix` package for Windows in Microsoft store and cross-platform versions may also be available in future updates.
 
-### Usage
+### Easy Steps
 
+# The steps easy peasy recovery flow, is best on a new desktop install, or better if you also want to migrate choose a second machine and recover.
+
+1. **Install Divi Desktop**: If Divi Desktop is not installed, install Divi Desktop Application on your computer first.
+2. **Sync Divi Desktop**: Allow Divi Desktop to fully sync with the blockchain. This step may take some time.
+3. **Shutdown Divi Desktop**: Once it’s fully synced, close the Divi Desktop application.
+4. **Run Divi Wallet Importer**: Launch Divi Wallet Importer and follow the steps it provides for the migration process. 
+5. **Be Patient**: Though the migration process is fast, the Divi Desktop portion may take a while to complete  loading, and synchronizing until fully synced.
+6. **Close Encrypt Wallet**: Once the "encrypt wallet" pop up notification appears, close the the pop up (wait to encrypt).
+7. **Inspect Your Balance**: Open Divi Desktop and confirm that your balance has been successfully migrated.
+8. **Close Divi Desktop**: Once you’ve confirmed the balance, shut down the Divi Desktop application again.
+9. **Restart Divi Desktop**: Open the Divi Desktop application once more.
+10. **Set a Password**: Click on the black triangle icon, and set a password to encrypt your wallet.
+
+Lastly, **Uninstall the Divi Wallet Importer**: After completing these steps, you won’t need the app again, so you can uninstall it from your system.
+
+### High Level Overview
 1. **Run the Application**: Launch the application and follow the on-screen instructions.
 2. **Input Mnemonic Phrase**: Enter your 12-word seed phrase, and the app will validate it.
 3. **Backup Existing Wallet**: If a `wallet.dat` file is detected, the app will prompt you to create a backup before proceeding.
