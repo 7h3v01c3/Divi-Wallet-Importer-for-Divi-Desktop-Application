@@ -37,6 +37,10 @@ The **Divi Wallet Importer** is a GUI application designed to allow users to sec
 9. **Restart Divi Desktop**: Open the Divi Desktop application once more.
 10. **Set a Password**: Click on the black triangle icon, and set a password to encrypt your wallet.
 
+> **⚠️ Important Note:**  
+> Seed words displayed in Divi Wallet are uppercase. However, the core engine will only regenerate your wallet correctly if they are entered in lowercase. Ensure you enter your seed words in lowercase.
+
+
 Lastly, **Uninstall the Divi Wallet Importer**: After completing these steps, you won’t need the app again, so you can uninstall it from your system.
 
 ### High Level Overview
