@@ -29,14 +29,15 @@ The steps for easy-peasy recovery flow work best on a new desktop installation. 
 1. **Install Divi Desktop**: If Divi Desktop is not installed, download and install the Divi Desktop Application on your computer.
 2. **Sync Divi Desktop**: Allow Divi Desktop to fully sync with the blockchain. This step may take some time.
 3. **Shutdown Divi Desktop**: Once it’s fully synced, close the Divi Desktop application.
-4. **Run Divi Wallet Importer**: Launch Divi Wallet Importer and follow its steps for the migration process.  
-   - **Enter Seed Words in lowercase.**
-5. **Be Patient**: Though the migration process is fast, the Divi Desktop portion may take a while to fully load and synchronize.
-6. **Close Encrypt Wallet Pop-up**: Once the "Encrypt Wallet" pop-up notification appears, close the pop-up (wait to encrypt for now).
-7. **Inspect Your Balance**: Open Divi Desktop and confirm that your balance has been successfully migrated.
-8. **Close Divi Desktop**: Once you’ve confirmed the balance, shut down the Divi Desktop application again.
-9. **Restart Divi Desktop**: Open the Divi Desktop application once more.
-10. **Set a Password**: Click on the black triangle icon and set a password to encrypt your wallet.
+4. **Run Divi Wallet Importer**: Launch Divi Wallet Importer and follow its steps for the migration process.
+   * **Enter Seed Words in lowercase.**
+5. **Divi Wallet Importer will hand off to Divi Desktop**: After confirming your seed words and creating your wallet, the Importer will notify you that it's closing and that Divi Desktop will now open. This handoff signals that the desktop wallet is now taking over the process and will complete the restoration and syncing.
+6. **Be Patient**: Though the migration process is fast, the Divi Desktop portion may take a while to fully load and synchronize.
+7. **Close Encrypt Wallet Pop-up**: Once the "Encrypt Wallet" pop-up notification appears, close the pop-up (wait to encrypt for now).
+8. **Inspect Your Balance**: Open Divi Desktop and confirm that your balance has been successfully migrated.
+9. **Close Divi Desktop**: Once you’ve confirmed the balance, shut down the Divi Desktop application again.
+10. **Restart Divi Desktop**: Open the Divi Desktop application once more.
+11. **Set a Password**: Click on the black triangle icon and set a password to encrypt your wallet.
 
 > **⚠️ Important Note:**  
 > Seed words displayed in Divi Wallet are uppercase. However, the core engine will only regenerate your wallet correctly if they are entered in lowercase. Ensure you enter your seed words in lowercase.
